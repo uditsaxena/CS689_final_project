@@ -6,7 +6,7 @@
 Given a video - a youtube clip, a movie - generate an accurate description for the video. This description might be one sentence(captions) or multiple sentences (paragraph)
 
 ##### Previous Work:
-1. Hierarchicial RNNs have been used to generate paragraphs, but have problems when detecting small objects, generating nouns etc.
+1. Hierarchical RNNs have been used to generate paragraphs, but have problems when detecting small objects, generating nouns etc.
 2. Translating Videos to Natural Language Using Deep Recurrent Neural Networks - learns the latent meaning state and a fluent grammatical model for the sentences. Falls short in better utilizing the temporal information in videos.
 3. Sequence to sequence : Video to text generation - learns temporal structure of the videos. Needs work on incorporating large number of sequences in a single video format.
 
@@ -24,6 +24,13 @@ We hope to evaluate sentence models by using the following metrics:
 
 
 ##### Proposed Timeline:
-
+We plan to proceed over the four weeks as follows:
+1. Week 1 - Literature survey of related work and setting up basic code and model architecture for future work.
+2. Week 2 - Implementing attention based model architecture.
+3. Week 3 - Evaluation of metrics and working on improving results by tweaking hyper-parameters of our model
+4. Week 4 - Analyzing results and submitting review document.
 
 ##### Challenges to tackle:
+- Modeling frame interdependence within the video.
+- Implementing effective attention based architecture.
+- Implementing an effective text description (sentence/paragraph) architecture.

@@ -11,11 +11,19 @@ Given a video - a youtube clip, a movie - generate an accurate description for t
 3. Sequence to sequence : Video to text generation - learns temporal structure of the videos. Needs work on incorporating large number of sequences in a single video format.
 
 ##### Proposed Method:
+This problem is analogous to machine translation between natural languages, where a sequence of words in the input language is translated to a sequence of words in the output language. Recently work has shown to effectively attack this sequence to sequence problem with an LSTM Recurrent Neural Network (RNN). We extend this paradigm to inputs comprised of sequences of video frames
+
 We break our proposed model into the following stages:
-- Generating features from video frames. These features are then fed into the next stage.
-- Model the dependency between frames by using attention models like stacked LSTMs and generate intermediate features for these interdependent frames.
+- Generating features from video frames. This is done using CNNs, the outputs of which are then fed into the next stage. Currently, CNNs are used on the entire image set at once - meaning only one large feature space is produced. This can be extended to applying CNNs on video subsequences to generate features for sub-actions. Pre-trained CNNs like a few from Caffe ModelZoo.
+- Model the dependency between frames by using attention models like stacked LSTMs and generate intermediate features for these interdependent frames. This can be done using the first layer of the stacked LSTM.
 - Process/encode these intermediate features to generate text based features.
-- Use these text based features to generate an accurate description of the video by generating one or more than one sentence.
+- Use these text based features to generate an accurate description of the video by generating one or more than one sentence using deeper layers of the LSTM. 
+
+##### Data Sets:
+Some datasets we would want to use are:
+- Microsoft Video Description Corpus - contains Youtube video clips with annotated text description.
+- MPII Movie Description Corpus
+-  Montreal Video Annotation Dataset
 
 ##### Evaluation Metrics:
 We hope to evaluate sentence models by using the following metrics:

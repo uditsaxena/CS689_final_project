@@ -1,4 +1,4 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 '''
 According to the paper, the authors extracted upto 80 frames from each video,
 they did not mention if they grabbed first 80 frames, or sampled 80 frames with same intervals,
@@ -11,40 +11,41 @@ import numpy as np
 import pandas as pd
 import skimage
 from cnn_util import *
+from parameters import *
 
 
 def preprocess_frame(image, target_height=227, target_width=227):
-
     if len(image.shape) == 2:
-        image = np.tile(image[:,:,None], 3)
+        image = np.tile(image[:, :, None], 3)
     elif len(image.shape) == 4:
-        image = image[:,:,:,0]
+        image = image[:, :, :, 0]
 
     image = skimage.img_as_float(image).astype(np.float32)
     height, width, rgb = image.shape
     if width == height:
-        resized_image = cv2.resize(image, (target_height,target_width))
+        resized_image = cv2.resize(image, (target_height, target_width))
 
     elif height < width:
-        resized_image = cv2.resize(image, (int(width * float(target_height)/height), target_width))
+        resized_image = cv2.resize(image, (int(width * float(target_height) / height), target_width))
         cropping_length = int((resized_image.shape[1] - target_height) / 2)
-        resized_image = resized_image[:,cropping_length:resized_image.shape[1] - cropping_length]
+        resized_image = resized_image[:, cropping_length:resized_image.shape[1] - cropping_length]
 
     else:
         resized_image = cv2.resize(image, (target_height, int(height * float(target_width) / width)))
         cropping_length = int((resized_image.shape[0] - target_width) / 2)
-        resized_image = resized_image[cropping_length:resized_image.shape[0] - cropping_length,:]
+        resized_image = resized_image[cropping_length:resized_image.shape[0] - cropping_length, :]
 
     return cv2.resize(resized_image, (target_height, target_width))
 
+
 def main():
-    num_frames = 80
-    caffe_root = '/Users/Udit/programs/github/caffe'
-    vgg_model = caffe_root + '/models/vgg/VGG_ILSVRC_19_layers.caffemodel'
-    vgg_deploy = caffe_root + '/models/vgg/VGG_ILSVRC_19_layers_deploy.prototxt'
-    # video_path = '/Users/Udit/Downloads/Datasets for ML FP/YouTubeClips'
-    video_save_path = '/Users/Udit/Downloads/sample_video/save'
-    video_path = '/Users/Udit/Downloads/sample_video'
+    # num_frames = 80
+    # caffe_root = '/Users/Udit/programs/github/caffe'
+    # vgg_model = caffe_root + '/models/vgg/VGG_ILSVRC_19_layers.caffemodel'
+    # vgg_deploy = caffe_root + '/models/vgg/VGG_ILSVRC_19_layers_deploy.prototxt'
+    # # video_path = '/Users/Udit/Downloads/Datasets for ML FP/YouTubeClips'
+    # video_save_path = '/Users/Udit/Downloads/sample_video/save'
+    # video_path = '/Users/Udit/Downloads/sample_video'
     videos = os.listdir(video_path)
     videos = filter(lambda x: x.endswith('mp4'), videos)
 
@@ -53,11 +54,11 @@ def main():
     for video in videos:
         print video
         count += 1
-        if (count > 10) :
+        if (count > 5):
             break
-		# print video
+        # print video
 
-        if os.path.exists( os.path.join(video_save_path, video) ):
+        if os.path.exists( os.path.join(video_features_path, video) ):
             print "Already processed ... "
             continue
 
@@ -75,7 +76,7 @@ def main():
         while True:
             ret, frame = cap.read()
             if ret is False:
-                print 'ret is false'
+                print 'Failed to read video (mp4)'
                 break
 
             frame_list.append(frame)
@@ -90,8 +91,9 @@ def main():
         cropped_frame_list = np.array(map(lambda x: preprocess_frame(x), frame_list))
         feats = cnn.get_features(cropped_frame_list)
         # print feats
-        save_full_path = os.path.join(video_save_path, video + '.npy')
+        save_full_path = os.path.join(video_features_path, video + '.npy')
         np.save(save_full_path, feats)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()

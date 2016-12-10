@@ -1,16 +1,10 @@
 import caffe
-# import ipdb
-import cv2
 import numpy as np
-import skimage
 
-caffe_root = '/Users/Udit/programs/github/caffe'
-deploy = caffe_root + '/models/bvlc_reference_caffenet/deploy.prototxt'
-model = caffe_root + '/models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
-mean = caffe_root + '/python/caffe/imagenet/ilsvrc_2012_mean.npy'
+from parameters import *
+
 
 class CNN(object):
-
     def __init__(self, deploy=deploy, model=model, mean=mean, batch_size=10, width=227, height=227):
 
         self.deploy = deploy
@@ -28,11 +22,11 @@ class CNN(object):
         caffe.set_mode_cpu()
         net = caffe.Net(self.deploy, self.model, caffe.TEST)
 
-        transformer = caffe.io.Transformer({'data':net.blobs['data'].data.shape})
-        transformer.set_transpose('data', (2,0,1))
+        transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
+        transformer.set_transpose('data', (2, 0, 1))
         transformer.set_mean('data', np.load(self.mean).mean(1).mean(1))
         transformer.set_raw_scale('data', 255)
-        transformer.set_channel_swap('data', (2,1,0))
+        transformer.set_channel_swap('data', (2, 1, 0))
 
         return net, transformer
 
@@ -46,12 +40,12 @@ class CNN(object):
 
             image_batch = image_list[start:end]
 
-            caffe_in = np.zeros(np.array(image_batch.shape)[[0,3,1,2]], dtype=np.float32)
+            caffe_in = np.zeros(np.array(image_batch.shape)[[0, 3, 1, 2]], dtype=np.float32)
 
             for idx, in_ in enumerate(image_batch):
                 caffe_in[idx] = self.transformer.preprocess('data', in_)
 
-            out = self.net.forward_all(blobs=[layers], **{'data':caffe_in})
+            out = self.net.forward_all(blobs=[layers], **{'data': caffe_in})
             feats = out[layers]
 
             all_feats[start:end] = feats

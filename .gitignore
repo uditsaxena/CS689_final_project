@@ -1,9 +1,9 @@
 data/
+cnn_models/
 models/
 *DS_Store
 *.ipynb
 *.pyc
-cnn_models/
-imagenet/
 data/
+.idea/*
 

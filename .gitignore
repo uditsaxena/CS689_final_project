@@ -1,5 +1,6 @@
 data/
 cnn_models/
+processed_data/
 models/
 *DS_Store
 *.ipynb

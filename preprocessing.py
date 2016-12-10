@@ -12,7 +12,7 @@ import pandas as pd
 import skimage
 from cnn_util import *
 from parameters import *
-
+import timeit
 
 def preprocess_frame(image, target_height=227, target_width=227):
     if len(image.shape) == 2:
@@ -48,15 +48,16 @@ def main():
     # video_path = '/Users/Udit/Downloads/sample_video'
     videos = os.listdir(video_path)
     videos = filter(lambda x: x.endswith('mp4'), videos)
-
+    # print videos[1:10]
     cnn = CNN()
-    count = 1
+    skipped_count = 0
+    count = 0
+    t = timeit.Timer('char in text', setup='text = "sample string"; char = "g"')
+    start = t.timeit(number=10000)
     for video in videos:
-        print video
-        count += 1
-        if (count > 5):
-            break
-        # print video
+        # count += 1
+        # if (count > 10):
+        #     break
 
         if os.path.exists( os.path.join(video_features_path, video) ):
             print "Already processed ... "
@@ -64,7 +65,7 @@ def main():
 
         video_fullpath = os.path.join(video_path, video)
         try:
-            print video_fullpath
+            # print video_fullpath
             cap  = cv2.VideoCapture( video_fullpath )
         except:
             print 'cap not available'
@@ -76,16 +77,19 @@ def main():
         while True:
             ret, frame = cap.read()
             if ret is False:
-                print 'Failed to read video (mp4)'
+                # print 'Failed to read video'
+                skipped_count += 1
                 break
 
             frame_list.append(frame)
             frame_count += 1
+        print video,":", frame_count
 
         frame_list = np.array(frame_list)
 
         if frame_count > 80:
             frame_indices = np.linspace(0, frame_count, num=num_frames, endpoint=False).astype(int)
+            # print frame_indices
             frame_list = frame_list[frame_indices]
 
         cropped_frame_list = np.array(map(lambda x: preprocess_frame(x), frame_list))
@@ -93,6 +97,10 @@ def main():
         # print feats
         save_full_path = os.path.join(video_features_path, video + '.npy')
         np.save(save_full_path, feats)
+        print skipped_count, " processed"
+    end = t.timeit(number=10000)
+    print end - start
+    print 'Videos: ', skipped_count
 
 
 if __name__ == "__main__":

@@ -166,13 +166,15 @@ class Video_Caption_Generator():
 
 def get_video_data(video_data_path, video_feat_path, train_ratio=0.9):
     video_data = pd.read_csv(video_data_path, sep=',')
+    print len(video_data['VideoID'].unique())
     video_data = video_data[video_data['Language'] == 'English']
+    print len(video_data['VideoID'].unique())
     video_data['video_path'] = video_data.apply(
         lambda row: row['VideoID'] + '_' + str(row['Start']) + '_' + str(row['End']) + '.mp4.npy', axis=1)
     video_data['video_path'] = video_data['video_path'].map(lambda x: os.path.join(video_feat_path, x))
-    print video_data
+    # print video_data
     video_data = video_data[video_data['video_path'].map(lambda x: os.path.exists(x))]
-    print video_data
+    # print video_data
     video_data = video_data[video_data['Description'].map(lambda x: isinstance(x, str))]
 
     unique_filenames = video_data['video_path'].unique()

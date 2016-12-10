@@ -20,8 +20,8 @@ class Video_Caption_Generator():
         with tf.device("/cpu:0"):
             self.Wemb = tf.Variable(tf.random_uniform([n_words, dim_hidden], -0.1, 0.1), name='Wemb')
 
-        self.lstm1 = rnn_cell.BasicLSTMCell(dim_hidden, state_is_tuple=False)
-        self.lstm2 = rnn_cell.BasicLSTMCell(dim_hidden, state_is_tuple=False)
+        self.lstm1 = rnn_cell.GRUCell(dim_hidden)#, state_is_tuple=False)
+        self.lstm2 = rnn_cell.GRUCell(dim_hidden)#, state_is_tuple=False)
 
         self.encode_image_W = tf.Variable( tf.random_uniform([dim_image, dim_hidden], -0.1, 0.1), name='encode_image_W')
         self.encode_image_b = tf.Variable( tf.zeros([dim_hidden]), name='encode_image_b')
@@ -161,9 +161,11 @@ class Video_Caption_Generator():
 
 
 ############### Global Parameters ###############
-video_path = '/Users/Udit/Downloads/Datasets for ML FP/YouTubeClips'
+# video_path = '/Users/Udit/Downloads/Datasets for ML FP/YouTubeClips'
+video_path = '/Users/Udit/Downloads/sample_video'
 video_data_path='/Users/Udit/programs/github/python/tensorflow_practice/s2vt/corpus.csv'
-video_feat_path = '/Users/Udit/Downloads/Datasets for ML FP/YouTubeClips/save'
+# video_feat_path = '/Users/Udit/Downloads/Datasets for ML FP/YouTubeClips/save'
+video_feat_path = '/Users/Udit/Downloads/sample_video/save'
 
 vgg16_path = '/home/taeksoo/Package/tensorflow_vgg16/vgg16.tfmodel'
 
@@ -180,7 +182,7 @@ learning_rate = 0.001
 def get_video_data(video_data_path, video_feat_path, train_ratio=0.9):
     video_data = pd.read_csv(video_data_path, sep=',')
     video_data = video_data[video_data['Language'] == 'English']
-    video_data['video_path'] = video_data.apply(lambda row: row['VideoID']+'_'+str(row['Start'])+'_'+str(row['End'])+'.avi.npy', axis=1)
+    video_data['video_path'] = video_data.apply(lambda row: row['VideoID']+'_'+str(row['Start'])+'_'+str(row['End'])+'.mp4.npy', axis=1)
     video_data['video_path'] = video_data['video_path'].map(lambda x: os.path.join(video_feat_path, x))
     video_data = video_data[video_data['video_path'].map(lambda x: os.path.exists( x ))]
     video_data = video_data[video_data['Description'].map(lambda x: isinstance(x, str))]
@@ -328,9 +330,10 @@ def test(model_path='models/model-900', video_feature_path=video_feat_path):
     # saver = tf.train.Saver()
     saver = tf.train.import_meta_graph(model_path+".meta")
     saver.restore(sess, model_path)
+    sess.run(tf.initialize_all_variables())
 
-    for v in tf.global_variables():
-                print v.name
+    # for v in tf.global_variables():
+    #             print v.name
 
     for video_feature_path in test_videos:
         print video_feature_path
@@ -349,6 +352,3 @@ def test(model_path='models/model-900', video_feature_path=video_feat_path):
 
         generated_sentence = ' '.join(generated_words)
         print generated_sentence
-        ipdb.set_trace()
-
-    ipdb.set_trace()

@@ -13,7 +13,7 @@ import skimage
 from cnn_util import *
 
 
-def preprocess_frame(image, target_height=224, target_width=224):
+def preprocess_frame(image, target_height=227, target_width=227):
 
     if len(image.shape) == 2:
         image = np.tile(image[:,:,None], 3)
@@ -42,14 +42,16 @@ def main():
     caffe_root = '/Users/Udit/programs/github/caffe'
     vgg_model = caffe_root + '/models/vgg/VGG_ILSVRC_19_layers.caffemodel'
     vgg_deploy = caffe_root + '/models/vgg/VGG_ILSVRC_19_layers_deploy.prototxt'
-    video_path = '/Users/Udit/Downloads/Datasets for ML FP/YouTubeClips'
-    video_save_path = '/Users/Udit/Downloads/Datasets for ML FP/YouTubeClips/save'
+    # video_path = '/Users/Udit/Downloads/Datasets for ML FP/YouTubeClips'
+    video_save_path = '/Users/Udit/Downloads/sample_video/save'
+    video_path = '/Users/Udit/Downloads/sample_video'
     videos = os.listdir(video_path)
-    videos = filter(lambda x: x.endswith('avi'), videos)
+    videos = filter(lambda x: x.endswith('mp4'), videos)
 
     cnn = CNN()
     count = 1
     for video in videos:
+        print video
         count += 1
         if (count > 10) :
             break
@@ -61,8 +63,10 @@ def main():
 
         video_fullpath = os.path.join(video_path, video)
         try:
+            print video_fullpath
             cap  = cv2.VideoCapture( video_fullpath )
         except:
+            print 'cap not available'
             pass
 
         frame_count = 0
@@ -71,6 +75,7 @@ def main():
         while True:
             ret, frame = cap.read()
             if ret is False:
+                print 'ret is false'
                 break
 
             frame_list.append(frame)
@@ -84,7 +89,7 @@ def main():
 
         cropped_frame_list = np.array(map(lambda x: preprocess_frame(x), frame_list))
         feats = cnn.get_features(cropped_frame_list)
-
+        # print feats
         save_full_path = os.path.join(video_save_path, video + '.npy')
         np.save(save_full_path, feats)
 

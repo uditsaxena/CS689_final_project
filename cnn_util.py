@@ -25,7 +25,7 @@ class CNN(object):
         self.height = height
 
     def get_net(self):
-        caffe.set_mode_gpu()
+        caffe.set_mode_cpu()
         net = caffe.Net(self.deploy, self.model, caffe.TEST)
 
         transformer = caffe.io.Transformer({'data':net.blobs['data'].data.shape})
@@ -37,6 +37,7 @@ class CNN(object):
         return net, transformer
 
     def get_features(self, image_list, layers='fc7', layer_sizes=[4096]):
+        # print image_list
         iter_until = len(image_list) + self.batch_size
         all_feats = np.zeros([len(image_list)] + layer_sizes)
 

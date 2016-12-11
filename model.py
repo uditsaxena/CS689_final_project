@@ -21,8 +21,8 @@ class Video_Caption_Generator():
         with tf.device("/cpu:0"):
             self.Wemb = tf.Variable(tf.random_uniform([n_words, dim_hidden], -0.1, 0.1), name='Wemb')
 
-        self.lstm1 = rnn_cell.GRUCell(dim_hidden)  # , state_is_tuple=False)
-        self.lstm2 = rnn_cell.GRUCell(dim_hidden)  # , state_is_tuple=False)
+        self.lstm1 = rnn_cell.BasicLSTMCell(dim_hidden , state_is_tuple=False)
+        self.lstm2 = rnn_cell.BasicLSTMCell(dim_hidden , state_is_tuple=False)
 
         self.encode_image_W = tf.Variable(tf.random_uniform([dim_image, dim_hidden], -0.1, 0.1), name='encode_image_W')
         self.encode_image_b = tf.Variable(tf.zeros([dim_hidden]), name='encode_image_b')
@@ -166,9 +166,9 @@ class Video_Caption_Generator():
 
 def get_video_data(video_data_path, video_feat_path, train_ratio=0.9):
     video_data = pd.read_csv(video_data_path, sep=',')
-    print len(video_data['VideoID'].unique())
+    #print len(video_data['VideoID'].unique())
     video_data = video_data[video_data['Language'] == 'English']
-    print len(video_data['VideoID'].unique())
+    #print len(video_data['VideoID'].unique())
     video_data['video_path'] = video_data.apply(
         lambda row: row['VideoID'] + '_' + str(row['Start']) + '_' + str(row['End']) + '.mp4.npy', axis=1)
     video_data['video_path'] = video_data['video_path'].map(lambda x: os.path.join(video_feat_path, x))
@@ -333,9 +333,9 @@ def test(model_path='models/model-900', video_feature_path=video_features_path):
     for video_feature_path in test_videos:
         print video_feature_path
         video_feat = np.load(video_feature_path)[None,...]
-        print video_feat
+        #print video_feat
         video_mask = np.ones((video_feat.shape[0], video_feat.shape[1]))
-        print "Video Mask: ", video_mask
+        #print "Video Mask: ", video_mask
 
         generated_word_index = sess.run(caption_tf, feed_dict={video_tf: video_feat, video_mask_tf: video_mask})
         probs_val = sess.run(probs_tf, feed_dict={video_tf: video_feat})

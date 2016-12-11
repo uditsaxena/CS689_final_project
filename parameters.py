@@ -6,7 +6,7 @@ mean = root + 'imagenet/ilsvrc_2012_mean.npy'
 video_path = root + 'data'
 video_data_path = root + 'corpus.csv'
 # video_feat_path = '/Users/Udit/Downloads/Datasets for ML FP/YouTubeClips/save'
-video_features_path = root + 'processed_data'
+video_features_path = '/media/usax/data'
 
 model_path = './models/'
 ############## Train Parameters #################

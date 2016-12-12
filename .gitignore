@@ -8,3 +8,8 @@ models/
 data/
 .idea/*
 vocab_data/*
+models_2/*
+models_3/*
+vocab_data_2/*
+vocab_data_3/*
+

@@ -9,6 +9,7 @@ from tensorflow.python.ops import rnn_cell
 
 from parameters import *
 
+np.set_printoptions(threshold=np.nan)
 
 class Video_Caption_Generator():
     def __init__(self, dim_image, n_words, dim_hidden, batch_size, n_lstm_steps, bias_init_vector=None):
@@ -223,9 +224,9 @@ def train():
     captions = train_data['Description'].values
     captions = map(lambda x: x.replace('.', ''), captions)
     captions = map(lambda x: x.replace(',', ''), captions)
-    wordtoix, ixtoword, bias_init_vector = preProBuildWordVocab(captions, word_count_threshold=10)
+    wordtoix, ixtoword, bias_init_vector = preProBuildWordVocab(captions, word_count_threshold=2)
     print 'Going to save.'
-    np.save('./vocab_data/ixtoword', ixtoword)
+    np.save('/nfs/nemo/u3/usaxena/project/vocab_data_3/ixtoword', ixtoword)
     print 'Initializing model'
     model = Video_Caption_Generator(
         dim_image=dim_image,
@@ -236,11 +237,14 @@ def train():
         bias_init_vector=bias_init_vector)
 
     tf_loss, tf_video, tf_video_mask, tf_caption, tf_caption_mask, tf_probs = model.build_model()
-    sess = tf.InteractiveSession()
+    #sess = tf.InteractiveSession()
 
+    sess = tf.Session(config=tf.ConfigProto(
+        allow_soft_placement=True,log_device_placement=True))
     saver = tf.train.Saver(max_to_keep=10)
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(tf_loss)
-    tf.initialize_all_variables().run()
+    init = tf.global_variables_initializer()
+    sess.run(init)
 
     for epoch in range(n_epochs):
         print "Epoch", epoch
@@ -304,11 +308,11 @@ def train():
             saver.save(sess, os.path.join(model_path, 'model'), global_step=epoch)
 
 
-def test(model_path='models/model-900', video_feature_path=video_features_path):
+def test(model_path='models_3/model-500', video_feature_path=video_features_path):
     train_data, test_data = get_video_data(video_data_path, video_feature_path, train_ratio=0.9)
-    test_videos = test_data['video_path'].unique()
-    ixtoword = pd.Series(np.load('./vocab_data/ixtoword.npy').tolist())
-    print test_videos
+    test_videos = train_data['video_path'].unique()
+    ixtoword = pd.Series(np.load('/nfs/nemo/u3/usaxena/project/vocab_data_3/ixtoword.npy').tolist())
+    #print test_videos
 
     model = Video_Caption_Generator(
         dim_image=dim_image,
@@ -329,21 +333,31 @@ def test(model_path='models/model-900', video_feature_path=video_features_path):
 
     # for v in tf.global_variables():
     #             print v.name
-
+    count = 0
     for video_feature_path in test_videos:
-        print video_feature_path
+        count += 1
+        #print video_feature_path
         video_feat = np.load(video_feature_path)[None,...]
         #print video_feat
         video_mask = np.ones((video_feat.shape[0], video_feat.shape[1]))
         #print "Video Mask: ", video_mask
 
-        generated_word_index = sess.run(caption_tf, feed_dict={video_tf: video_feat, video_mask_tf: video_mask})
-        probs_val = sess.run(probs_tf, feed_dict={video_tf: video_feat})
-        embed_val = sess.run(last_embed_tf, feed_dict={video_tf: video_feat})
-        generated_words = ixtoword[generated_word_index]
-
-        punctuation = np.argmax(np.array(generated_words) == '.') + 1
-        generated_words = generated_words[:punctuation]
-
-        generated_sentence = ' '.join(generated_words)
-        print generated_sentence
+        try:
+            generated_word_index = sess.run(caption_tf, feed_dict={video_tf: video_feat, video_mask_tf: video_mask})
+            probs_val = sess.run(probs_tf, feed_dict={video_tf: video_feat})
+            embed_val = sess.run(last_embed_tf, feed_dict={video_tf: video_feat})
+            generated_words = ixtoword[generated_word_index]
+            
+            print "Prob value: ",len(probs_val)
+            print "Embed value: ", len(embed_val)
+            punctuation = np.argmax(np.array(generated_words) == '.') + 1
+            
+            print "Generated words: ",np.array(generated_words), "\nPunctuation",punctuation
+            generated_words = generated_words[:punctuation]
+            print "\nAfter sampling:",generated_words
+            generated_sentence = ' '.join(generated_words)
+            print video_feature_path, ":", generated_sentence
+        except ValueError:
+            pass
+        if (count > 0):
+            break

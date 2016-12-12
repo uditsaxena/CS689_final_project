@@ -1,5 +1,6 @@
 data/
 cnn_models/
+parameters.py
 processed_data/
 models/
 *DS_Store

@@ -1,4 +1,4 @@
-root = '/nfs/nemo/u3/usaxena/project/'
+root = './'
 deploy = root + 'cnn_models/bvlc_reference_caffenet/deploy.prototxt'
 model = root + 'cnn_models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
 mean = root + 'imagenet/ilsvrc_2012_mean.npy'
@@ -6,9 +6,9 @@ mean = root + 'imagenet/ilsvrc_2012_mean.npy'
 video_path = root + 'data'
 video_data_path = root + 'corpus.csv'
 # video_feat_path = '/Users/Udit/Downloads/Datasets for ML FP/YouTubeClips/save'
-video_features_path = '/media/usax/data'
+video_features_path = root + 'processed_data'
 
-model_path = root + 'models_3/'
+model_path = root + 'models_4/'
 ############## Train Parameters #################
 
 dim_image = 4096

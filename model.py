@@ -24,6 +24,8 @@ class Video_Caption_Generator():
 
         self.lstm1 = rnn_cell.BasicLSTMCell(dim_hidden , state_is_tuple=False)
         self.lstm2 = rnn_cell.BasicLSTMCell(dim_hidden , state_is_tuple=False)
+        #
+        self.lstm3 = rnn_cell.BasicLSTMCell(dim_hidden , state_is_tuple=False)
 
         self.encode_image_W = tf.Variable(tf.random_uniform([dim_image, dim_hidden], -0.1, 0.1), name='encode_image_W')
         self.encode_image_b = tf.Variable(tf.zeros([dim_hidden]), name='encode_image_b')
@@ -54,6 +56,8 @@ class Video_Caption_Generator():
 
         state1 = tf.zeros([self.batch_size, self.lstm1.state_size])
         state2 = tf.zeros([self.batch_size, self.lstm2.state_size])
+        #
+        state3 = tf.zeros([self.batch_size, self.lstm3.state_size])
 
         padding = tf.zeros([self.batch_size, self.dim_hidden])
 
@@ -70,6 +74,9 @@ class Video_Caption_Generator():
 
             with tf.variable_scope("LSTM2"):
                 output2, state2 = self.lstm2(tf.concat(1, [padding, output1]), state2)
+            #
+            with tf.variable_scope("LSTM3"):
+                output3, state3 = self.lstm3(tf.concat(1, [padding, output2]), state3)
 
         # Each video might have different length. Need to mask those.
         # But how? Padding with 0 would be enough?
@@ -88,13 +95,16 @@ class Video_Caption_Generator():
 
             with tf.variable_scope("LSTM2"):
                 output2, state2 = self.lstm2(tf.concat(1, [current_embed, output1]), state2)
+            #    
+            with tf.variable_scope("LSTM3"):
+                output3, state3 = self.lstm3(tf.concat(1, [current_embed, output1]), state3)
 
             labels = tf.expand_dims(caption[:, i], 1)
             indices = tf.expand_dims(tf.range(0, self.batch_size, 1), 1)
             concated = tf.concat(1, [indices, labels])
             onehot_labels = tf.sparse_to_dense(concated, tf.pack([self.batch_size, self.n_words]), 1.0, 0.0)
 
-            logit_words = tf.nn.xw_plus_b(output2, self.embed_word_W, self.embed_word_b)
+            logit_words = tf.nn.xw_plus_b(output3, self.embed_word_W, self.embed_word_b)
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logit_words, onehot_labels)
             cross_entropy = cross_entropy * caption_mask[:, i]
 
@@ -122,6 +132,8 @@ class Video_Caption_Generator():
 
         state1 = tf.zeros([1, self.lstm1.state_size])
         state2 = tf.zeros([1, self.lstm2.state_size])
+        #
+        state3 = tf.zeros([1, self.lstm3.state_size])
         padding = tf.zeros([1, self.dim_hidden])
 
         generated_words = []
@@ -137,6 +149,9 @@ class Video_Caption_Generator():
 
             with tf.variable_scope("LSTM2"):
                 output2, state2 = self.lstm2(tf.concat(1, [padding, output1]), state2)
+            #
+            with tf.variable_scope("LSTM3"):
+                output3, state3 = self.lstm3(tf.concat(1, [padding, output1]), state3)
 
         for i in range(self.n_lstm_steps):
 
@@ -150,8 +165,11 @@ class Video_Caption_Generator():
 
             with tf.variable_scope("LSTM2"):
                 output2, state2 = self.lstm2(tf.concat(1, [current_embed, output1]), state2)
+            #
+            with tf.variable_scope("LSTM3"):
+                output3, state3 = self.lstm3(tf.concat(1, [current_embed, output1]), state3)
 
-            logit_words = tf.nn.xw_plus_b(output2, self.embed_word_W, self.embed_word_b)
+            logit_words = tf.nn.xw_plus_b(output3, self.embed_word_W, self.embed_word_b)
             max_prob_index = tf.argmax(logit_words, 1)[0]
             generated_words.append(max_prob_index)
             probs.append(logit_words)
@@ -220,13 +238,17 @@ def preProBuildWordVocab(sentence_iterator, word_count_threshold=5): # borrowed 
 
 
 def train():
+    # loss_function_timestep
+    lf_ts = 0
     train_data, _ = get_video_data(video_data_path, video_features_path, train_ratio=0.9)
+
     captions = train_data['Description'].values
     captions = map(lambda x: x.replace('.', ''), captions)
     captions = map(lambda x: x.replace(',', ''), captions)
     wordtoix, ixtoword, bias_init_vector = preProBuildWordVocab(captions, word_count_threshold=2)
+    # print "WordtoIx: ",wordtoix
     print 'Going to save.'
-    np.save('/nfs/nemo/u3/usaxena/project/vocab_data_3/ixtoword', ixtoword)
+    np.save('./vocab_data_3/ixtoword', ixtoword)
     print 'Initializing model'
     model = Video_Caption_Generator(
         dim_image=dim_image,
@@ -272,9 +294,11 @@ def train():
                 current_video_masks[ind][:len(current_feats_vals[ind])] = 1
 
             current_captions = current_batch['Description'].values
+            # print "Current captions: ", current_captions
             current_caption_ind = map(
                 lambda cap: [wordtoix[word] for word in cap.lower().split(' ')[:-1] if word in wordtoix],
                 current_captions)
+            # print "Caption indices", current_caption_ind
 
             current_caption_matrix = sequence.pad_sequences(current_caption_ind, padding='post',
                                                             maxlen=n_frame_step - 1)
@@ -282,6 +306,8 @@ def train():
                 [current_caption_matrix, np.zeros([len(current_caption_matrix), 1])]).astype(int)
             current_caption_masks = np.zeros((current_caption_matrix.shape[0], current_caption_matrix.shape[1]))
             nonzeros = np.array(map(lambda x: (x != 0).sum() + 1, current_caption_matrix))
+            # print "Current Caption mask: ", current_caption_masks
+            # print "Current Caption matrix: ", current_caption_matrix
 
             for ind, row in enumerate(current_caption_masks):
                 row[:nonzeros[ind]] = 1
@@ -300,7 +326,14 @@ def train():
                     tf_caption_mask: current_caption_masks
                 })
 
+            # print "Current Caption matrix: ", current_caption_matrix
+            # print "Current Caption mask: ", current_caption_masks
+            f = open("loss_val_2.log", "a")
             print loss_val
+            f.write(str(lf_ts) + " , " +str(loss_val))
+            f.write("\n")
+            f.close()
+            lf_ts += 1
         if np.mod(epoch, 100) == 0:
             print "Epoch ", epoch, " is done. Saving the model ..."
             # for v in tf.global_variables():
@@ -308,10 +341,41 @@ def train():
             saver.save(sess, os.path.join(model_path, 'model'), global_step=epoch)
 
 
-def test(model_path='models_3/model-500', video_feature_path=video_features_path):
+def test(model_path='models/model-900', video_feature_path=video_features_path):
     train_data, test_data = get_video_data(video_data_path, video_feature_path, train_ratio=0.9)
     test_videos = train_data['video_path'].unique()
-    ixtoword = pd.Series(np.load('/nfs/nemo/u3/usaxena/project/vocab_data_3/ixtoword.npy').tolist())
+    
+    # for video_feature_path in test_videos:
+    #     print (video_feature_path.split("/")[-1]).split(".")[0]), ((video_feature_path.split("/")[-1]).split(".")[0]).split("_")[:-2], "_".join(((video_feature_path.split("/")[-1]).split(".")[0]).split("_")[:-2])
+    # #
+    captions = train_data[['VideoID','Description']].values
+    result = {}
+    for row in captions:
+        if row[0] not in result:
+            result[row[0]] = []
+        result[row[0]].append(row[1])
+
+    word_counts_per_video = {}
+    for row in result:
+        sentence_iterator = result[row]
+        word_counts = {}
+        for sent in sentence_iterator:
+            for w in sent.lower().split(' '):
+                w = w.replace(',',' ')
+                w = w.replace('.',' ')
+                word_counts[w] = word_counts.get(w, 0) + 1
+
+        word_counts_per_video[row] = word_counts
+
+    final_vocab_per_video = {}
+    word_count_threshold = 2
+    for video in word_counts_per_video:
+        word_counts = word_counts_per_video[video]
+        vocab = [w for w in word_counts if word_counts[w] >= word_count_threshold]
+        final_vocab_per_video[video] = vocab
+    # #
+    
+    ixtoword = pd.Series(np.load('./vocab_data_3/ixtoword.npy').tolist())
     #print test_videos
 
     model = Video_Caption_Generator(
@@ -334,6 +398,8 @@ def test(model_path='models_3/model-500', video_feature_path=video_features_path
     # for v in tf.global_variables():
     #             print v.name
     count = 0
+    common_words_count_per_video = {}
+    common_words_per_video = {}
     for video_feature_path in test_videos:
         count += 1
         #print video_feature_path
@@ -343,21 +409,39 @@ def test(model_path='models_3/model-500', video_feature_path=video_features_path
         #print "Video Mask: ", video_mask
 
         try:
+            video_label = "_".join(((video_feature_path.split("/")[-1]).split(".")[0]).split("_")[:-2])
             generated_word_index = sess.run(caption_tf, feed_dict={video_tf: video_feat, video_mask_tf: video_mask})
             probs_val = sess.run(probs_tf, feed_dict={video_tf: video_feat})
             embed_val = sess.run(last_embed_tf, feed_dict={video_tf: video_feat})
+            # print generated_word_index
             generated_words = ixtoword[generated_word_index]
             
-            print "Prob value: ",len(probs_val)
-            print "Embed value: ", len(embed_val)
+            # print "Prob value: ",len(probs_val)
+            # print "Embed value: ", len(embed_val)
             punctuation = np.argmax(np.array(generated_words) == '.') + 1
             
-            print "Generated words: ",np.array(generated_words), "\nPunctuation",punctuation
+            print video_feature_path, video_label
+            common_words = list(set(generated_words) & set(final_vocab_per_video[video_label]))
+            print len(common_words), common_words
+            common_words_count_per_video[video_label] = len(common_words)
+            common_words_per_video[video_label] = common_words
+            print "Generated words: ",np.array(generated_words), "\nPunctuation:",punctuation,"\nVocab: ", final_vocab_per_video[video_label]
             generated_words = generated_words[:punctuation]
             print "\nAfter sampling:",generated_words
             generated_sentence = ' '.join(generated_words)
-            print video_feature_path, ":", generated_sentence
+            print video_feature_path, video_label, ":", generated_sentence
         except ValueError:
+            print "Error"
             pass
-        if (count > 0):
+        if (count > 10):
             break
+
+    f_common = open("CommonWords.txt","w")
+    for video in common_words_per_video:
+        f_common.write("{} , {} \n\n".format(video,  common_words_per_video[video]))
+    f_common.close
+
+    f_common_count = open("CommonWordsCount.txt","w")
+    for video_count in common_words_count_per_video:
+        f_common_count.write("{} , {} \n\n".format(video_count,  common_words_count_per_video[video]))
+    f_common_count.close
